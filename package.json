@@ -1,0 +1,29 @@
+{
+  "name": "saas-pos",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start --webpack"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.86.2",
+    "dexie": "^4.2.1",
+    "next": "^16.0.8",
+    "pdfkit": "^0.17.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18.2.7",
+    "@types/react-dom": "^18.2.4",
+    "autoprefixer": "^10.4.22",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.0.7",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "typescript": "^5.2.2"
+  }
+}
