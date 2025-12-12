@@ -24,16 +24,17 @@ export default function SelectPlanPage() {
     else setPlans(data || []);
   };
 
-  const handleNext = () => {
-    if (!selectedPlan) {
-      alert("Please select a plan.");
-      return;
-    }
-    router.push({
-      pathname: "/customer-info",
-      query: { plan_id: selectedPlan, trial: isTrial },
-    });
-  };
+const handleNext = () => {
+  if (!selectedPlan) {
+    alert("Please select a plan.");
+    return;
+  }
+
+  router.push(
+    `/customer-info?plan_id=${selectedPlan}&trial=${isTrial ? 1 : 0}`
+  );
+};
+
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-50 px-4 py-10">
