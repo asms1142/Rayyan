@@ -1,21 +1,41 @@
+// api/create-customer/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+
+function generateOrgCode(length = 6) {
+  // Alphanumeric uppercase
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// Ensure org_code is unique
+async function getUniqueOrgCode(supabase: any) {
+  let code = generateOrgCode(6);
+  let exists = true;
+
+  while (exists) {
+    const { data } = await supabase
+      .from("organization")
+      .select("org_id")
+      .eq("org_code", code)
+      .single();
+
+    if (!data) exists = false;
+    else code = generateOrgCode(6); // retry
+  }
+
+  return code;
+}
 
 export async function POST(req: Request) {
   const supabase = createClient();
   const body = await req.json();
 
-  const {
-    fullname,
-    nickname,
-    email,
-    password,
-    orgname,
-    address,
-    phone,
-    plan_id,
-    trial,
-  } = body;
+  const { fullname, nickname, email, password, orgname, address, phone, plan_id, trial } = body;
 
   try {
     // -------------------------------------------
@@ -25,7 +45,12 @@ export async function POST(req: Request) {
     if (beginErr) throw new Error("TX Begin Failed: " + beginErr.message);
 
     // -------------------------------------------
-    // 1️⃣ Create organization
+    // 1️⃣ Generate unique org_code
+    // -------------------------------------------
+    const org_code = await getUniqueOrgCode(supabase);
+
+    // -------------------------------------------
+    // 2️⃣ Create organization
     // -------------------------------------------
     const { data: orgData, error: orgErr } = await supabase
       .from("organization")
@@ -38,6 +63,7 @@ export async function POST(req: Request) {
           sub_planid: plan_id,
           sub_type: trial ? "Trial" : "Under Subscription",
           email_verified: false,
+          org_code, // ✅ include org_code
           comp_id: 1,
         },
       ])
@@ -45,11 +71,10 @@ export async function POST(req: Request) {
       .single();
 
     if (orgErr) throw new Error("Organization Error: " + orgErr.message);
-
     const org_id = orgData.org_id;
 
     // -------------------------------------------
-    // 2️⃣ Create auth user
+    // 3️⃣ Create auth user
     // -------------------------------------------
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email,
@@ -58,11 +83,10 @@ export async function POST(req: Request) {
     });
 
     if (authError || !authUser) throw new Error("Auth Error: " + authError?.message);
-
     const auth_uid = authUser.user?.id;
 
     // -------------------------------------------
-    // 3️⃣ Insert userinfo
+    // 4️⃣ Insert userinfo
     // -------------------------------------------
     const { data: userData, error: userErr } = await supabase
       .from("userinfo")
@@ -84,11 +108,10 @@ export async function POST(req: Request) {
       .single();
 
     if (userErr) throw new Error("UserInfo Error: " + userErr.message);
-
     const user_id = userData.user_id;
 
     // -------------------------------------------
-    // 4️⃣ Update organization owner
+    // 5️⃣ Update organization owner
     // -------------------------------------------
     const { error: orgUpdateErr } = await supabase
       .from("organization")
@@ -98,7 +121,7 @@ export async function POST(req: Request) {
     if (orgUpdateErr) throw new Error("Org Update Error: " + orgUpdateErr.message);
 
     // -------------------------------------------
-    // 5️⃣ Insert branch
+    // 6️⃣ Insert default branch
     // -------------------------------------------
     const { error: branchErr } = await supabase.from("org_branch").insert([
       {
@@ -123,6 +146,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: "Customer + Organization created successfully",
+      org_code, // return org_code to frontend if needed
     });
   } catch (err: any) {
     // -------------------------------------------

@@ -1,4 +1,4 @@
-// pages/superadmin/subscription-management.tsx
+"use client";
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
@@ -33,13 +33,18 @@ export default function SubscriptionManagement() {
       .from("subscription_plans")
       .select("*")
       .order("sortindex", { ascending: true });
-    if (error) console.log(error);
-    else setPlans(data || []);
+
+    if (error) {
+      console.error("Fetch plans error:", error);
+    } else {
+      setPlans(data || []);
+    }
   };
 
-  // Add New Plan
+  // ➕ Add New Plan
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+
     const { error } = await supabase.from("subscription_plans").insert([
       {
         plan_name: planName,
@@ -50,15 +55,18 @@ export default function SubscriptionManagement() {
         sortindex: parseInt(sortIndex || "0"),
       },
     ]);
-    if (error) alert(error.message);
-    else {
-      alert("Plan added successfully!");
-      resetForm();
-      fetchPlans();
+
+    if (error) {
+      alert(error.message);
+      return;
     }
+
+    alert("Plan added successfully!");
+    resetForm();
+    fetchPlans();
   };
 
-  // Edit Plan
+  // ✏️ Edit Plan
   const handleEdit = (plan: Plan) => {
     setEditingPlan(plan);
     setPlanName(plan.plan_name);
@@ -72,6 +80,7 @@ export default function SubscriptionManagement() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPlan) return;
+
     const { error } = await supabase
       .from("subscription_plans")
       .update({
@@ -84,24 +93,31 @@ export default function SubscriptionManagement() {
         updated_at: new Date(),
       })
       .eq("plan_id", editingPlan.plan_id);
-    if (error) alert(error.message);
-    else {
-      alert("Plan updated successfully!");
-      resetForm();
-      fetchPlans();
-      setEditingPlan(null);
+
+    if (error) {
+      alert(error.message);
+      return;
     }
+
+    alert("Plan updated successfully!");
+    resetForm();
+    fetchPlans();
   };
 
-  // Delete Plan
+  // ❌ Delete Plan
   const handleDelete = async (plan_id: number) => {
     if (!confirm("Are you sure you want to delete this plan?")) return;
+
     const { error } = await supabase
       .from("subscription_plans")
       .delete()
       .eq("plan_id", plan_id);
-    if (error) alert(error.message);
-    else fetchPlans();
+
+    if (error) {
+      alert(error.message);
+    } else {
+      fetchPlans();
+    }
   };
 
   const resetForm = () => {
@@ -133,6 +149,7 @@ export default function SubscriptionManagement() {
           className="border p-2 rounded col-span-2"
           required
         />
+
         <input
           type="number"
           placeholder="Price"
@@ -141,6 +158,7 @@ export default function SubscriptionManagement() {
           className="border p-2 rounded"
           required
         />
+
         <input
           type="number"
           placeholder="Duration (Months)"
@@ -149,6 +167,7 @@ export default function SubscriptionManagement() {
           className="border p-2 rounded"
           required
         />
+
         <input
           type="number"
           placeholder="Max Users"
@@ -156,6 +175,7 @@ export default function SubscriptionManagement() {
           onChange={(e) => setMaxUsers(e.target.value)}
           className="border p-2 rounded"
         />
+
         <input
           type="number"
           placeholder="Sort Index"
@@ -163,23 +183,26 @@ export default function SubscriptionManagement() {
           onChange={(e) => setSortIndex(e.target.value)}
           className="border p-2 rounded"
         />
+
         <textarea
           placeholder="Description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           className="border p-2 rounded col-span-2 md:col-span-6"
         />
+
         <button
           type="submit"
-          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 col-span-1 md:col-span-1"
+          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
         >
           {editingPlan ? "Update Plan" : "Add Plan"}
         </button>
+
         {editingPlan && (
           <button
             type="button"
             onClick={resetForm}
-            className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600 col-span-1 md:col-span-1"
+            className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
           >
             Cancel
           </button>

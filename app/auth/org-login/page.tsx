@@ -21,11 +21,14 @@ export default function OrgLoginPage() {
     setError("");
 
     try {
-      // 1️⃣ Sign in with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // ----------------------------------------------------
+      // 1️⃣ Supabase Auth Login
+      // ----------------------------------------------------
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
       if (authError || !authData.user) {
         setError(authError?.message || "Invalid login credentials");
@@ -35,7 +38,9 @@ export default function OrgLoginPage() {
 
       const auth_uid = authData.user.id;
 
-      // 2️⃣ Fetch user info to check role
+      // ----------------------------------------------------
+      // 2️⃣ Fetch user info
+      // ----------------------------------------------------
       const { data: userInfo, error: userInfoError } = await supabase
         .from("userinfo")
         .select("*")
@@ -43,19 +48,25 @@ export default function OrgLoginPage() {
         .single();
 
       if (userInfoError || !userInfo) {
-        setError("User info not found");
+        await supabase.auth.signOut();
+        setError("User information not found");
         setLoading(false);
         return;
       }
 
-      // 3️⃣ Only allow organization users (role_id = 2)
+      // ----------------------------------------------------
+      // 3️⃣ Role enforcement (Org User Only)
+      // ----------------------------------------------------
       if (userInfo.role_id !== 2) {
+        await supabase.auth.signOut();
         setError("Access denied: not an organization user");
         setLoading(false);
         return;
       }
 
-      // 4️⃣ Fetch organization to check email verification
+      // ----------------------------------------------------
+      // 4️⃣ Organization checks
+      // ----------------------------------------------------
       const { data: orgData, error: orgError } = await supabase
         .from("organization")
         .select("email_verified")
@@ -63,23 +74,27 @@ export default function OrgLoginPage() {
         .single();
 
       if (orgError || !orgData) {
-        setError("Organization info not found");
+        await supabase.auth.signOut();
+        setError("Organization information not found");
         setLoading(false);
         return;
       }
 
       if (!orgData.email_verified) {
-        setError("Your email is not verified. Please verify your email to login.");
+        await supabase.auth.signOut();
+        setError("Your email is not verified. Please verify your email.");
         setLoading(false);
         return;
       }
 
-      // ✅ Success → redirect to organization dashboard
-      setLoading(false);
-      router.push("/dashboard"); // replace with your actual org dashboard route
+      // ----------------------------------------------------
+      // 5️⃣ SUCCESS → Dashboard
+      // ----------------------------------------------------
+      router.push("/dashboard");
     } catch (err: any) {
+      setError("Unexpected error: " + err.message);
+    } finally {
       setLoading(false);
-      setError("An unexpected error occurred: " + err.message);
     }
   };
 
@@ -87,10 +102,15 @@ export default function OrgLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md p-6">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">Organization Login</CardTitle>
+          <CardTitle className="text-2xl text-center">
+            Organization Login
+          </CardTitle>
         </CardHeader>
+
         <CardContent className="space-y-4">
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && (
+            <p className="text-red-500 text-sm text-center">{error}</p>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <Input
@@ -100,6 +120,7 @@ export default function OrgLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+
             <Input
               type="password"
               placeholder="Password"
@@ -107,6 +128,7 @@ export default function OrgLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? "Logging in..." : "Login"}
             </Button>
