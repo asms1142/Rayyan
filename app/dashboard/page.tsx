@@ -2,13 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/lib/AuthProvider";
 
 export default function SuperadminDashboard() {
   const router = useRouter();
+  const { user, loading } = useAuth();
+
+  // Show loading state while checking auth
+  if (loading) return <p className="p-6">Loading...</p>;
+
+  // If somehow user is null, don't render the dashboard (redirect handled in AuthProvider)
+  if (!user) return null;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/auth/login";
+    router.push("/auth/login");
   };
 
   return (

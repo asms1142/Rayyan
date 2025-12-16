@@ -1,6 +1,20 @@
-import "../styles/globals.css";
+import "@/styles/globals.css";
 import type { AppProps } from "next/app";
+import { useRouter } from "next/router";
+import MainLayout from "@/components/layout/MainLayout";
 
 export default function MyApp({ Component, pageProps }: AppProps) {
-  return <Component {...pageProps} />;
+  const router = useRouter();
+
+  const noLayoutRoutes = ["/auth/login", "/org-login"];
+
+  if (noLayoutRoutes.includes(router.pathname)) {
+    return <Component {...pageProps} />;
+  }
+
+  return (
+    <MainLayout>
+      <Component {...pageProps} />
+    </MainLayout>
+  );
 }
