@@ -12,6 +12,9 @@
   --text-secondary: #6b7280;
   --border-color: #e5e7eb;
   --primary: #714b67; /* Odoo-like purple tone */
+  --primary-hover: #5a3850; /* Slightly darker for hover */
+  --btn-text-light: #ffffff;
+  --btn-text-dark: #111827;
 }
 
 /* ==============================
@@ -64,17 +67,35 @@ input:focus {
   box-shadow: 0 0 0 1px var(--primary);
 }
 
+/* ==============================
+   BUTTONS
+================================ */
 button {
   background-color: var(--primary);
-  color: white;
+  color: var(--btn-text-light);
   border-radius: 6px;
-  padding: 10px;
+  padding: 10px 12px;
   font-size: 15px;
   font-weight: 500;
+  transition: background-color 0.2s, color 0.2s, filter 0.2s;
 }
 
+/* Primary button hover */
 button:hover {
-  filter: brightness(0.95);
+  background-color: var(--primary-hover);
+  color: var(--btn-text-light); /* keep text visible */
+  filter: none; /* remove brightness filter to avoid text invisibility */
+}
+
+/* Optional: secondary / light buttons */
+button.btn-light {
+  background-color: #f3f4f6;
+  color: var(--text-primary);
+}
+
+button.btn-light:hover {
+  background-color: #e5e7eb;
+  color: var(--text-primary);
 }
 
 /* ==============================

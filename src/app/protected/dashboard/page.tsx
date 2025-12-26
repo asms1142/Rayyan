@@ -1,86 +1,178 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useAuth } from "@/lib/AuthProvider";
 import { Loader } from "@/components/ui/Loader";
 
-export default function SuperadminDashboard() {
-  const router = useRouter();
-  const { user, loading } = useAuth();
+/* ================= TYPES ================= */
 
-  // Show loading state while checking auth
-  if (loading) return <p className="p-6">Loading...</p>;
+interface OrgSummary {
+  org_id: number;
+  orgname: string;
+  customers: number;
+  projects: number;
+  users: number;
+  tokens: number;
+}
 
-  // If somehow user is null, don't render the dashboard (redirect handled in AuthProvider)
-  if (!user) return null;
+export default function DashboardPage() {
+  const [loading, setLoading] = useState(true);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/public/auth/login");
-  };
+  /* Left summary */
+  const [totalOrgs, setTotalOrgs] = useState(0);
+  const [trialOrgs, setTrialOrgs] = useState(0);
+  const [subscribedOrgs, setSubscribedOrgs] = useState(0);
+
+  /* Right table */
+  const [orgSummaries, setOrgSummaries] = useState<OrgSummary[]>([]);
+
+  /* ================= LOAD DASHBOARD ================= */
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      setLoading(true);
+
+      try {
+        /* ---------- Organizations ---------- */
+        const { data: orgs, error: orgErr } = await supabase
+          .from("organization")
+          .select("org_id, orgname, sub_type, is_trial");
+
+        if (orgErr || !orgs) throw orgErr;
+
+        setTotalOrgs(orgs.length);
+        setTrialOrgs(
+          orgs.filter(
+            (o) => o.sub_type === "Trial" || o.is_trial === true
+          ).length
+        );
+        setSubscribedOrgs(
+          orgs.filter((o) => o.sub_type === "Under Subscription").length
+        );
+
+        /* ---------- Customers ---------- */
+        const { data: customers } = await supabase
+          .from("customer")
+          .select("cus_id, org_id");
+
+        /* ---------- Projects ---------- */
+        const { data: projects } = await supabase
+          .from("project")
+          .select("project_id, org_id");
+
+        /* ---------- Users ---------- */
+        const { data: users } = await supabase
+          .from("userinfo")
+          .select("user_id, org_id");
+
+        /* ---------- Tokens ---------- */
+        const { data: tokens } = await supabase
+          .from("tokens")
+          .select("token_id, org_id");
+
+        /* ---------- Build summary ---------- */
+        const summary: OrgSummary[] = orgs.map((org) => ({
+          org_id: org.org_id,
+          orgname: org.orgname,
+          customers:
+            customers?.filter((c) => c.org_id === org.org_id).length ?? 0,
+          projects:
+            projects?.filter((p) => p.org_id === org.org_id).length ?? 0,
+          users:
+            users?.filter((u) => u.org_id === org.org_id).length ?? 0,
+          tokens:
+            tokens?.filter((t) => t.org_id === org.org_id).length ?? 0,
+        }));
+
+        setOrgSummaries(summary);
+      } catch (err) {
+        console.error("Dashboard load error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, []);
+
+  if (loading) return <Loader />;
+
+  /* ================= UI ================= */
 
   return (
-    <div className="max-w-6xl mx-auto mt-10 p-6 bg-white rounded-lg shadow">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Superadmin Dashboard</h1>
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-bold">Platform Dashboard</h1>
 
-        <button
-          onClick={handleLogout}
-          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-        >
-          Logout
-        </button>
-      </div>
-
-      {/* Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Organizations */}
-        <div className="border rounded p-4">
-          <h2 className="font-semibold text-lg mb-2">Organizations</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Manage tenant companies (organizations).
-          </p>
-
-          <button
-            onClick={() => router.push("/superadmin/organizations")}
-            className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
-          >
-            Manage Organizations
-          </button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ================= LEFT SIDE ================= */}
+        <div className="space-y-4">
+          <DashboardCard
+            title="Total Organizations"
+            value={totalOrgs}
+          />
+          <DashboardCard
+            title="Trial Period"
+            value={trialOrgs}
+          />
+          <DashboardCard
+            title="Under Subscriptions"
+            value={subscribedOrgs}
+          />
         </div>
 
-        {/* Branches */}
-        <div className="border rounded p-4">
-          <h2 className="font-semibold text-lg mb-2">Branches</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Manage branches under organizations.
-          </p>
-
-          <button
-            onClick={() => router.push("/superadmin/branches")}
-            className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
-          >
-            Manage Branches
-          </button>
-        </div>
-
-        {/* Subscriptions */}
-        <div className="border rounded p-4">
-          <h2 className="font-semibold text-lg mb-2">Subscriptions</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Manage subscription plans.
-          </p>
-
-          <button
-            onClick={() => router.push("/superadmin/subscription-management")}
-            className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
-          >
-            Manage Subscriptions
-          </button>
+        {/* ================= RIGHT SIDE ================= */}
+        <div className="lg:col-span-2 bg-white border rounded-lg overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-100 text-left">
+              <tr>
+                <th className="px-4 py-2">Organization</th>
+                <th className="px-4 py-2 text-center">Customers</th>
+                <th className="px-4 py-2 text-center">Projects</th>
+                <th className="px-4 py-2 text-center">Users</th>
+                <th className="px-4 py-2 text-center">Tokens</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orgSummaries.map((org) => (
+                <tr key={org.org_id} className="border-t hover:bg-gray-50">
+                  <td className="px-4 py-2 font-medium">
+                    {org.orgname}
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    {org.customers}
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    {org.projects}
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    {org.users}
+                  </td>
+                  <td className="px-4 py-2 text-center">
+                    {org.tokens}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ================= SMALL CARD ================= */
+
+function DashboardCard({
+  title,
+  value,
+}: {
+  title: string;
+  value: number;
+}) {
+  return (
+    <div className="bg-white border rounded-lg p-5 shadow-sm">
+      <p className="text-sm text-gray-500">{title}</p>
+      <p className="text-3xl font-bold mt-2">{value}</p>
     </div>
   );
 }

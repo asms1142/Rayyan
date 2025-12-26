@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import PageWrapper from '@/components/ui/PageWrapper';
 import { Loader } from '@/components/ui/Loader';
 import { usePermission } from '@/hooks/usePermission';
@@ -9,100 +10,114 @@ import { supabase } from '@/lib/supabaseClient';
 interface OrgMetrics {
   total_customers: number;
   total_projects: number;
-  new_tickets: number;
-  tickets_wip: number;
-  tickets_resolved: number;
+  tickets_opened: number;
+  tickets_in_progress: number;
+  tickets_completed: number;
+  tickets_held_up: number;
   tickets_archived: number;
 }
 
 export default function OrganizationDashboard() {
-  /** RBAC */
-  const { authorized, loading, permissions } = usePermission('organization-dashboard');
+  const { authorized, loading } = usePermission('organization-dashboard');
 
-  /** Metrics state */
   const [metrics, setMetrics] = useState<OrgMetrics>({
     total_customers: 0,
     total_projects: 0,
-    new_tickets: 0,
-    tickets_wip: 0,
-    tickets_resolved: 0,
+    tickets_opened: 0,
+    tickets_in_progress: 0,
+    tickets_completed: 0,
+    tickets_held_up: 0,
     tickets_archived: 0,
   });
 
   const [fetching, setFetching] = useState(true);
 
-  /** Fetch org-wise metrics */
   useEffect(() => {
-    const fetchMetrics = async () => {
+    if (!authorized) return;
+
+    const fetchDashboard = async () => {
       setFetching(true);
 
       try {
-        // Get logged-in user
-        const { data: sessionData } = await supabase.auth.getSession();
-        const userId = sessionData?.session?.user.id;
+        /* 1️⃣ Get logged-in auth user */
+        const { data: session } = await supabase.auth.getSession();
+        const authUid = session?.session?.user?.id;
+        if (!authUid) return;
 
-        if (!userId) {
-          setFetching(false);
-          return;
-        }
-
-        // Get user's org_id
-        const { data: userInfo, error: userError } = await supabase
+        /* 2️⃣ Get org_id from userinfo */
+        const { data: userinfo, error: userError } = await supabase
           .from('userinfo')
           .select('org_id')
-          .eq('auth_uid', userId)
+          .eq('auth_uid', authUid)
           .single();
 
-        if (userError || !userInfo) {
-          console.error('Error fetching user info:', userError);
-          setFetching(false);
+        if (userError || !userinfo?.org_id) {
+          console.error('Userinfo error:', userError);
           return;
         }
 
-        const orgId = userInfo.org_id;
+        const orgId = userinfo.org_id;
 
-        /** Fetch total customers */
-        const { count: customerCount, error: customerError } = await supabase
+        /* 3️⃣ Customers (org based) */
+        const { count: customerCount } = await supabase
           .from('customer')
           .select('cus_id', { count: 'exact', head: true })
           .eq('org_id', orgId);
 
-        if (customerError) {
-          console.error('Error fetching customers:', customerError);
-        }
-
-        /** Fetch total projects */
-        // Assuming you have a 'projects' table linked to customer or org
-        const { count: projectCount, error: projectError } = await supabase
-          .from('projects')
-          .select('proj_id', { count: 'exact', head: true })
+        /* 4️⃣ Projects (org based) */
+        const { count: projectCount } = await supabase
+          .from('project')
+          .select('project_id', { count: 'exact', head: true })
           .eq('org_id', orgId);
 
-        if (projectError) {
-          console.error('Error fetching projects:', projectError);
+        /* 5️⃣ Tokens (Tickets) */
+        const { data: tokens, error: tokenError } = await supabase
+          .from('tokens')
+          .select('status')
+          .eq('org_id', orgId);
+
+        if (tokenError) {
+          console.error('Token fetch error:', tokenError);
+          return;
         }
 
-        setMetrics({
-          total_customers: customerCount || 0,
-          total_projects: projectCount || 0,
-          new_tickets: 0, // placeholder
-          tickets_wip: 0, // placeholder
-          tickets_resolved: 0, // placeholder
-          tickets_archived: 0, // placeholder
+        /* 6️⃣ Status counter (MATCH ENUM EXACTLY) */
+        const counter: Record<string, number> = {
+          Opened: 0,
+          'In Progress': 0,
+          Completed: 0,
+          'Held Up': 0,
+          Archived: 0,
+        };
+
+        tokens?.forEach((t) => {
+          if (t.status in counter) {
+            counter[t.status]++;
+          }
         });
 
+        /* 7️⃣ Set metrics */
+        setMetrics({
+          total_customers: customerCount ?? 0,
+          total_projects: projectCount ?? 0,
+          tickets_opened: counter.Opened,
+          tickets_in_progress: counter['In Progress'],
+          tickets_completed: counter.Completed,
+          tickets_held_up: counter['Held Up'],   // ✅ FIXED
+          tickets_archived: counter.Archived,
+        });
       } catch (err) {
-        console.error('Error fetching metrics:', err);
+        console.error('Dashboard error:', err);
       } finally {
         setFetching(false);
       }
     };
 
-    if (authorized) fetchMetrics();
+    fetchDashboard();
   }, [authorized]);
 
-  /** UI states */
   if (loading) return <Loader message="Checking access..." />;
+
   if (!authorized) {
     return (
       <PageWrapper title="Organization Dashboard">
@@ -114,45 +129,50 @@ export default function OrganizationDashboard() {
   }
 
   return (
-    <PageWrapper title="Organization Dashboard" breadcrumb={['Dashboard', 'Organization']}>
+    <PageWrapper title="Organization Dashboard" breadcrumb={['Organization Dashboard']}>
       {fetching ? (
-        <Loader message="Loading metrics..." />
+        <Loader message="Loading dashboard..." />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Total Customers */}
-          <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold">{metrics.total_customers}</div>
-            <div className="text-gray-500 mt-1">Total Customers</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* LEFT SIDE */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Link href="/protected/customers">
+              <div className="bg-white rounded-xl shadow p-6 text-center hover:shadow-lg transition cursor-pointer">
+                <div className="text-4xl font-bold text-blue-600">
+                  {metrics.total_customers}
+                </div>
+                <div className="text-gray-500 mt-2">Total Customers</div>
+              </div>
+            </Link>
+
+            <Link href="/protected/projects">
+              <div className="bg-white rounded-xl shadow p-6 text-center hover:shadow-lg transition cursor-pointer">
+                <div className="text-4xl font-bold text-green-600">
+                  {metrics.total_projects}
+                </div>
+                <div className="text-gray-500 mt-2">Total Projects</div>
+              </div>
+            </Link>
           </div>
 
-          {/* Total Projects */}
-          <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold">{metrics.total_projects}</div>
-            <div className="text-gray-500 mt-1">Total Projects</div>
-          </div>
+          {/* RIGHT SIDE */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="text-lg font-semibold mb-4">Ticket Summary</h3>
 
-          {/* New Tickets */}
-          <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold">{metrics.new_tickets}</div>
-            <div className="text-gray-500 mt-1">New Tickets</div>
-          </div>
+            <ul className="space-y-2 text-sm">
+              <li className="flex justify-between"><span>Tickets Opened</span><span>{metrics.tickets_opened}</span></li>
+              <li className="flex justify-between"><span>Tickets In Progress</span><span>{metrics.tickets_in_progress}</span></li>
+              <li className="flex justify-between"><span>Tickets Completed</span><span>{metrics.tickets_completed}</span></li>
+              <li className="flex justify-between"><span>Tickets Held Up</span><span>{metrics.tickets_held_up}</span></li>
+              <li className="flex justify-between"><span>Archived Tickets</span><span>{metrics.tickets_archived}</span></li>
+            </ul>
 
-          {/* Tickets in WIP */}
-          <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold">{metrics.tickets_wip}</div>
-            <div className="text-gray-500 mt-1">Tickets in WIP</div>
-          </div>
-
-          {/* Resolved Tickets */}
-          <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold">{metrics.tickets_resolved}</div>
-            <div className="text-gray-500 mt-1">Resolved Tickets</div>
-          </div>
-
-          {/* Archived Tickets */}
-          <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold">{metrics.tickets_archived}</div>
-            <div className="text-gray-500 mt-1">Archived Tickets</div>
+            <Link
+              href="/protected/project-overview"
+              className="mt-6 block text-center bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+              View Details
+            </Link>
           </div>
         </div>
       )}

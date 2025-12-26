@@ -10,7 +10,7 @@ export default function GetStartedPage() {
     <div className="min-h-screen flex flex-col lg:flex-row bg-[var(--bg-app)]">
       {/* ================= LEFT INFO PANEL ================= */}
       <div className="lg:w-1/2 flex flex-col justify-center px-12 py-16 lg:py-32 bg-[var(--primary)] text-white">
-        <h1 className="text-5xl font-bold mb-6">Rayyan POS</h1>
+        <h1 className="text-5xl font-bold mb-6">SAAS CRM</h1>
         <p className="text-lg leading-relaxed max-w-lg opacity-90 mb-10">
           The complete business management platform to control inventory, sales, 
           users, subscriptions, accounting, and analytics — all in one place.
@@ -18,14 +18,14 @@ export default function GetStartedPage() {
 
         <ul className="space-y-3 text-sm opacity-90">
           <li>• Secure role-based access</li>
-          <li>• Real-time inventory tracking</li>
+          <li>• Real-time Tickets tracking</li>
           <li>• Subscription & billing management</li>
           <li>• Enterprise-grade reporting</li>
           <li>• Multi-user collaboration</li>
         </ul>
 
         <div className="mt-16 text-xs opacity-70">
-          © {new Date().getFullYear()} Rayyan POS · All rights reserved
+          © {new Date().getFullYear()} SAAS CRM · All rights reserved
         </div>
       </div>
 

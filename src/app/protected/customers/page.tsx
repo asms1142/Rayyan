@@ -1,112 +1,190 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Loader } from '@/components/ui/Loader';
+import 'tabulator-tables/dist/css/tabulator.min.css';
+import { TabulatorFull as Tabulator } from 'tabulator-tables';
+
+import PageWrapper from '@/components/ui/PageWrapper';
 import FormInput from '@/components/ui/FormInput';
+import { Loader } from '@/components/ui/Loader';
+import { usePermission } from '@/hooks/usePermission';
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface Customer {
+  cus_id: number;
+  cus_code: string | null;
+  cus_name: string;
+  cus_address: string | null;
+  cus_email: string | null;
+  cus_mobile_no: string | null;
+  cus_phone_no: string | null;
+  org_id: number;
+  created_at: string;
+  user_id: number;
+  org_name?: string;
+  created_by?: string;
+}
 
-  const handleLogin = async () => {
-    setError(null);
-    setLoading(true);
+export default function CustomersPage() {
+  const { permissions, authorized, loading: permissionLoading } = usePermission('customers');
 
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [search, setSearch] = useState('');
+
+  const tableRef = useRef<HTMLDivElement>(null);
+  const tabulator = useRef<Tabulator>();
+  const [orgId, setOrgId] = useState<number | null>(null);
+
+  /** ================= Get current user & org ================= */
+  useEffect(() => {
+    const init = async () => {
+      try {
+        setLoadingData(true);
+        console.log('Initializing customer page...');
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const authUid = sessionData?.session?.user.id;
+        if (!authUid) throw new Error('No active session');
+
+        const { data: userinfo, error: userErr } = await supabase
+          .from('userinfo')
+          .select('user_id, org_id, fullname')
+          .eq('auth_uid', authUid)
+          .single();
+
+        if (userErr) throw userErr;
+        if (!userinfo) throw new Error('User info not found');
+
+        setOrgId(userinfo.org_id);
+        await fetchCustomers(userinfo.org_id);
+      } catch (err) {
+        console.error('Init error:', err);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    if (authorized) init();
+  }, [authorized]);
+
+  /** ================= Fetch Customers ================= */
+  const fetchCustomers = async (org_id: number) => {
     try {
-      // 1️⃣ Authenticate user with Supabase
-      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      console.log('Fetching customers for org_id:', org_id);
 
-      if (loginError) throw loginError;
-      if (!loginData.session?.user) throw new Error('Login failed');
+      const { data, error } = await supabase
+        .from('customer')
+        .select(`
+          cus_id,
+          cus_code,
+          cus_name,
+          cus_address,
+          cus_email,
+          cus_mobile_no,
+          cus_phone_no,
+          org_id,
+          created_at,
+          user_id,
+          organization(orgname),
+          userinfo(fullname)
+        `)
+        .eq('org_id', org_id)
+        .order('cus_name', { ascending: true });
 
-      const authUid = loginData.session.user.id;
+      if (error) throw error;
 
-      // 2️⃣ Fetch userinfo for preferred landing page and role
-      const { data: userInfo, error: userInfoError } = await supabase
-        .from('userinfo')
-        .select('prefered_land_page, role_id')
-        .eq('auth_uid', authUid)
-        .single();
+      const mapped: Customer[] = (data || []).map((c: any) => ({
+        ...c,
+        org_name: c.organization?.orgname || '-',
+        created_by: c.userinfo?.fullname || '-',
+      }));
 
-      if (userInfoError) throw userInfoError;
-
-      let targetPage = userInfo?.prefered_land_page?.trim() || '';
-
-      // 3️⃣ Validate page against allowed pages
-      const allowedPages = ['/dashboard', '/customers', '/customers/create', '/module-menu'];
-      const isValidPage = (page?: string) => page && allowedPages.includes(page);
-
-      // 4️⃣ If prefered page invalid, check role default landing page
-      if (!isValidPage(targetPage)) {
-        if (userInfo?.role_id) {
-          const { data: roleData, error: roleError } = await supabase
-            .from('userrole')
-            .select('default_land_page')
-            .eq('role_id', userInfo.role_id)
-            .single();
-
-          if (!roleError && roleData?.default_land_page) {
-            targetPage = roleData.default_land_page.trim();
-          } else {
-            targetPage = '';
-          }
-        } else {
-          targetPage = '';
-        }
-      }
-
-      // 5️⃣ Final redirect
-      if (isValidPage(targetPage)) {
-        router.push(targetPage);
-      } else {
-        router.push('/unauthorized');
-      }
-    } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'Login failed');
-    } finally {
-      setLoading(false);
+      console.log('Customers fetched:', mapped);
+      setCustomers(mapped);
+    } catch (err) {
+      console.error('Failed to fetch customers:', err);
+      setCustomers([]);
     }
   };
 
+  /** ================= Tabulator ================= */
+  useEffect(() => {
+    if (!tableRef.current) return;
+
+    tabulator.current?.destroy();
+
+    tabulator.current = new Tabulator(tableRef.current, {
+      height: '600px',
+      layout: 'fitColumns',
+      data: customers,
+      reactiveData: true,
+      pagination: 'local',
+      paginationSize: 50,
+      columns: [
+        { title: 'SL', formatter: 'rownum', width: 70, hozAlign: 'center' },
+        { title: 'Code', field: 'cus_code', hozAlign: 'center' },
+        { title: 'Customer Name', field: 'cus_name', hozAlign: 'left' },
+        {
+          title: 'Contact',
+          field: 'cus_id',
+          formatter: (cell) => {
+            const row = cell.getData() as Customer;
+            return `
+              <div class="flex flex-col text-sm">
+                <span>${row.cus_address || '-'}</span>
+                <span>${row.cus_email || '-'}</span>
+                <span>${row.cus_mobile_no || '-'}</span>
+                <span>${row.cus_phone_no || '-'}</span>
+              </div>
+            `;
+          },
+        },
+        { title: 'Organization', field: 'org_name', hozAlign: 'left' },
+        { title: 'Created By', field: 'created_by', hozAlign: 'left' },
+        {
+          title: 'Created At',
+          field: 'created_at',
+          hozAlign: 'center',
+          formatter: (cell) => new Date(cell.getValue()).toLocaleString(),
+        },
+      ],
+      rowFormatter: (row) => {
+        const el = row.getElement();
+        el.classList.add('hover:bg-gray-100', 'transition', 'cursor-pointer');
+      },
+    });
+  }, [customers]);
+
+  /** ================= Search ================= */
+  useEffect(() => {
+    if (!tabulator.current) return;
+    tabulator.current.clearFilter(true);
+    if (search) {
+      tabulator.current.addFilter((data) =>
+        [data.cus_name, data.cus_email, data.cus_mobile_no, data.cus_phone_no]
+          .some((v) => v?.toLowerCase().includes(search.toLowerCase()))
+      );
+    }
+  }, [search]);
+
+  /** ================= Render ================= */
+  if (permissionLoading || loadingData) return <Loader message="Loading customers..." />;
+  if (!authorized) return <div className="text-center text-red-600 p-10 font-semibold">Unauthorized</div>;
+
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-50 p-4">
-      <div className="w-full max-w-md bg-white p-6 rounded shadow">
-        <h1 className="text-2xl font-bold mb-4 text-center">Login</h1>
-
-        {error && <div className="text-red-500 mb-4">{error}</div>}
-
+    <PageWrapper title="Customer Management">
+      <div className="mb-4">
         <FormInput
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mb-3"
+          placeholder="Search by Name, Email, Mobile, Phone"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
         />
-        <FormInput
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mb-3"
-        />
-
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-        >
-          {loading ? <Loader message="Logging in..." /> : 'Login'}
-        </button>
       </div>
-    </div>
+
+      <div className="bg-white rounded shadow p-2">
+        <div ref={tableRef}></div>
+      </div>
+    </PageWrapper>
   );
 }

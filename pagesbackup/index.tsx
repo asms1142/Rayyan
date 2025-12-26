@@ -11,7 +11,7 @@ export default function GetStartedPage() {
       <h1 className="text-5xl font-bold text-blue-600 mb-4">Rayyan</h1>
       <p className="text-xl text-gray-700 mb-8 text-center max-w-xl">
         Easy and reliable solution for your business <br />
-        System Combined POS, Purchase, Inventory, Accounting, Reporting, CRM, Reports and more...!
+        System Combined Customers, Projects, Tickets, Reports and more...!
       </p>
 
       <div className="flex gap-4 mb-6">

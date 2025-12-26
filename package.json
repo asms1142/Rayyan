@@ -1,5 +1,5 @@
 {
-  "name": "saas-pos",
+  "name": "saas-crm",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -28,6 +28,7 @@
     "dexie": "^4.2.1",
     "lucide-react": "^0.560.0",
     "next": "^16.0.8",
+    "nprogress": "^0.2.0",
     "pdfkit": "^0.17.2",
     "quill": "^2.0.3",
     "react": "^18.2.0",

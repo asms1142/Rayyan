@@ -202,7 +202,7 @@ export default function CustomerInfoPage() {
       }
 
       alert(`Customer created successfully!\nOrganization Code: ${org_code}`);
-      router.push("/public/auth/org-login");
+      router.push("/public/auth/login");
     } catch (err: any) {
       console.error(err);
       alert("Unexpected error: " + err.message);
@@ -215,9 +215,9 @@ export default function CustomerInfoPage() {
     <div className="min-h-screen flex flex-col lg:flex-row items-center justify-center bg-[var(--bg-app)] px-4 py-12 gap-10">
       {/* Left Illustration Panel */}
       <div className="hidden lg:flex flex-col items-center justify-center w-1/2 bg-[var(--primary)] text-white p-12 rounded-2xl shadow-lg">
-        <h2 className="text-4xl font-bold mb-4">SaaS POS</h2>
+        <h2 className="text-4xl font-bold mb-4">SaaS CRM</h2>
         <p className="text-lg opacity-90">
-          Enter your organization details to create an account and get started with your SaaS POS subscription.
+          Enter your organization details to create an account and get started with your SaaS CRM subscription.
         </p>
       </div>
 

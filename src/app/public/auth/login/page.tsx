@@ -90,19 +90,19 @@ export default function LoginPage() {
       <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2">
         {/* ================= LEFT BRAND PANEL ================= */}
         <div className="hidden lg:flex flex-col justify-center px-24 bg-[#714b67] text-white">
-          <h1 className="text-4xl font-semibold mb-6">SaaS POS</h1>
+          <h1 className="text-4xl font-semibold mb-6">SaaS CRM</h1>
           <p className="text-lg leading-relaxed max-w-md opacity-90">
-            A complete business management platform to control inventory,
-            sales, users, subscriptions, and analytics — all in one place.
+            A complete CRM management platform to Customers,
+            Projects, Tickets and analytics — all in one place.
           </p>
           <ul className="mt-10 space-y-3 text-sm opacity-90">
             <li>• Secure role-based access</li>
-            <li>• Real-time inventory tracking</li>
+            <li>• Real-time Tickets tracking</li>
             <li>• Subscription & billing management</li>
             <li>• Enterprise-grade reporting</li>
           </ul>
           <div className="mt-16 text-xs opacity-70">
-            © {year ?? "—"} SaaS POS · All rights reserved
+            © {year ?? "—"} SaaS CRM · All rights reserved
           </div>
         </div>
 

@@ -95,7 +95,7 @@ export default function OrgLoginPage() {
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       {/* ================= LEFT BRAND PANEL ================= */}
       <div className="hidden lg:flex flex-col justify-center px-24 bg-[#714b67] text-white">
-        <h1 className="text-4xl font-semibold mb-6">SaaS POS</h1>
+        <h1 className="text-4xl font-semibold mb-6">SaaS CRM</h1>
 
         <p className="text-lg leading-relaxed max-w-md opacity-90">
           Login to manage your organization, branches, users, subscriptions,
@@ -110,7 +110,7 @@ export default function OrgLoginPage() {
         </ul>
 
         <div className="mt-16 text-xs opacity-70">
-          © {year ?? "—"} SaaS POS · All rights reserved
+          © {year ?? "—"} SaaS CRM · All rights reserved
         </div>
       </div>
 

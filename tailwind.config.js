@@ -26,7 +26,8 @@ module.exports = {
           foreground: 'hsl(var(--popover-foreground))',
         },
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
+          DEFAULT: 'hsl(var(--primary))',      // normal primary
+          hover: 'hsl(var(--primary-hover))',  // hover color
           foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
@@ -55,6 +56,18 @@ module.exports = {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        // Add a safe white/black for text visibility
+        text: {
+          light: '#ffffff',
+          dark: '#111827',
+        },
+        btn: {
+          primary: 'hsl(var(--primary))',
+          primaryHover: 'hsl(var(--primary-hover))',
+        },
+      },
+      transitionProperty: {
+        'bg-color': 'background-color, color, border-color, fill, stroke',
       },
     },
   },
