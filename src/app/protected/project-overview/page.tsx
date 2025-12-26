@@ -21,7 +21,8 @@ interface Project {
 
 export default function ProjectOverview() {
   const router = useRouter();
-  const { authorized, loading: permissionLoading } = usePermission("project-overview");
+  const { authorized, loading: permissionLoading } =
+    usePermission("project-overview");
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +45,7 @@ export default function ProjectOverview() {
         .select("user_id, org_id")
         .eq("auth_uid", authUid)
         .single();
+
       if (!me) throw new Error("Userinfo not found");
       const userId = me.user_id;
 
@@ -52,6 +54,7 @@ export default function ProjectOverview() {
         .select("project_id, status, action_date, accepted_at, proj_cont_id")
         .eq("user_id", userId)
         .order("action_date", { ascending: false });
+
       if (!logs) {
         setProjects([]);
         return;
@@ -90,6 +93,7 @@ export default function ProjectOverview() {
       const contIds = Object.values(latestLogs)
         .map((l) => l.proj_cont_id)
         .filter(Boolean);
+
       const { data: contributorsData } = await supabase
         .from("project_contributor")
         .select("proj_cont_id, title")
@@ -97,14 +101,19 @@ export default function ProjectOverview() {
 
       const projMap: Project[] = projectsData.map((p) => {
         const log = latestLogs[p.project_id];
+
         const projectType =
-          projTypes?.find((pt) => pt.proj_type_id === p.proj_type_id)?.project_type ||
-          "Unknown Type";
+          projTypes?.find((pt) => pt.proj_type_id === p.proj_type_id)
+            ?.project_type || "Unknown Type";
+
         const customerName =
-          customers?.find((c) => c.cus_id === p.cus_id)?.cus_name || "Unknown Customer";
+          customers?.find((c) => c.cus_id === p.cus_id)?.cus_name ||
+          "Unknown Customer";
+
         const contributorTitles =
-          contributorsData?.filter((c) => c.proj_cont_id === log.proj_cont_id).map((c) => c.title) ||
-          [];
+          contributorsData
+            ?.filter((c) => c.proj_cont_id === log.proj_cont_id)
+            .map((c) => c.title) || [];
 
         return {
           project_id: p.project_id,
@@ -135,14 +144,22 @@ export default function ProjectOverview() {
     );
   }, [projects, search]);
 
-  if (permissionLoading || loading) return <Loader message="Loading projects..." />;
-  if (!authorized) return <div className="p-10 text-center text-red-500">Unauthorized</div>;
+  if (permissionLoading || loading)
+    return <Loader message="Loading projects..." />;
+
+  if (!authorized)
+    return (
+      <div className="p-10 text-center text-red-500">Unauthorized</div>
+    );
 
   return (
     <PageWrapper title="Project Overview">
-      {/* Search */}
+      {/* 🔍 Search */}
       <div className="relative mb-6">
-        <AiOutlineSearch className="absolute top-3 left-3 text-gray-400" size={18} />
+        <AiOutlineSearch
+          className="absolute top-3 left-3 text-gray-400"
+          size={18}
+        />
         <FormInput
           placeholder="Search by Project or Customer"
           value={search}
@@ -152,30 +169,42 @@ export default function ProjectOverview() {
         {search && (
           <button
             onClick={() => setSearch("")}
-            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 transition"
+            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
           >
             <AiOutlineClose size={20} />
           </button>
         )}
       </div>
 
-      {/* Projects Grid */}
+      {/* 📦 Projects Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProjects.length === 0 && (
-          <div className="col-span-full text-center text-gray-400">No projects found</div>
+          <div className="col-span-full text-center text-gray-400">
+            No projects found
+          </div>
         )}
 
         {filteredProjects.map((p) => (
           <div
             key={p.project_id}
             className="bg-white border rounded-lg p-5 shadow-md hover:shadow-xl transition cursor-pointer hover:scale-[1.02] hover:bg-gray-50"
-            onClick={() => router.push(`/projects/${p.project_id}`)}
+            onClick={() =>
+              router.push(
+                `/protected/project-tokens/${p.project_id}`
+              )
+            }
           >
-            <h3 className="font-bold text-xl mb-2">{p.project_name}</h3>
-            <p className="text-gray-600 text-sm mb-1">Project Type: {p.project_type}</p>
-            <p className="text-gray-600 text-sm mb-3">Customer: {p.cus_name}</p>
+            <h3 className="font-bold text-xl mb-2">
+              {p.project_name}
+            </h3>
+            <p className="text-gray-600 text-sm mb-1">
+              Project Type: {p.project_type}
+            </p>
+            <p className="text-gray-600 text-sm mb-3">
+              Customer: {p.cus_name}
+            </p>
 
-            <div className="flex flex-wrap items-center gap-2 mb-3">
+            <div className="flex flex-wrap gap-2 mb-3">
               {p.contributors.slice(0, 6).map((c, idx) => (
                 <span
                   key={idx}

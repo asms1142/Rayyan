@@ -5,8 +5,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getSidebar, ModuleItem } from "@/lib/getSidebar";
 import { supabase } from "@/lib/supabaseClient";
+
+interface MenuItem {
+  id: number;
+  menu_name: string;
+  page_name: string;
+  module_id: number;
+}
+
+interface ModuleItem {
+  module_id: number;
+  name: string;
+  menus: MenuItem[];
+}
 
 export default function Sidebar({
   collapsed,
@@ -21,6 +33,7 @@ export default function Sidebar({
   const [companyName, setCompanyName] = useState<string>("Company");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const pathname = usePathname();
 
@@ -68,28 +81,69 @@ export default function Sidebar({
   }, []);
 
   // ---------------------------
-  // Sidebar menu load
+  // Sidebar menu load with RBAC
   // ---------------------------
   useEffect(() => {
     if (!roleId) return;
 
-    setLoading(true);
-    getSidebar(roleId)
-      .then((data) => {
-        setModules(data);
-        setLoading(false);
-      })
-      .catch((err) => {
+    const fetchModulesWithAccess = async () => {
+      setLoading(true);
+      try {
+        // 1️⃣ Fetch modules
+        const { data: modulesData } = await supabase
+          .from("module")
+          .select("*")
+          .order("sort_index", { ascending: true });
+
+        if (!modulesData) {
+          setModules([]);
+          setLoading(false);
+          return;
+        }
+
+        // 2️⃣ Fetch menus
+        const { data: menusData } = await supabase
+          .from("module_menu")
+          .select("*");
+
+        // 3️⃣ Fetch menu_access for current role
+        const { data: accessData } = await supabase
+          .from("menu_access")
+          .select("*")
+          .eq("role_id", roleId);
+
+        // 4️⃣ Filter menus based on view access
+        const modulesWithMenus = modulesData.map((mod) => {
+          const modMenus = menusData
+            .filter((menu: any) => menu.module_id === mod.module_id)
+            .filter((menu: any) => {
+              const access = accessData?.find(
+                (a: any) => a.menu_id === menu.id && a.module_id === mod.module_id
+              );
+              return access?.view; // show only if view=true
+            });
+          return { ...mod, menus: modMenus };
+        });
+
+        // 5️⃣ Keep only modules that have at least one menu
+        const filteredModules = modulesWithMenus.filter((mod) => mod.menus.length > 0);
+
+        setModules(filteredModules);
+      } catch (err) {
         console.error("Error loading sidebar:", err);
+        setModules([]);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchModulesWithAccess();
   }, [roleId]);
 
   // ---------------------------
   // Helpers
   // ---------------------------
   const buildHref = (pageName: string) => {
-    // 🔥 ABSOLUTE PATH — CORE FIX
     return pageName.startsWith("/")
       ? pageName
       : `/protected/${pageName}`;
@@ -101,25 +155,14 @@ export default function Sidebar({
 
   if (!isLoggedIn) return null;
 
-  if (loading) {
-    return (
-      <aside
-        className={`border-r bg-white transition-all duration-200 ${
-          collapsed ? "w-16" : "w-64"
-        }`}
-      >
-        <div className="p-4 text-center text-gray-500">
-          Loading sidebar...
-        </div>
-      </aside>
-    );
-  }
-
-  return (
+  // ---------------------------
+  // Sidebar UI
+  // ---------------------------
+  const SidebarContent = (
     <aside
-      className={`border-r bg-white transition-all duration-200 ${
+      className={`border-r bg-white flex flex-col transition-all duration-200 ${
         collapsed ? "w-16" : "w-64"
-      }`}
+      } h-full`}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b">
@@ -134,14 +177,12 @@ export default function Sidebar({
       </div>
 
       {/* Modules */}
-      <nav className="p-2 space-y-1">
+      <nav className="p-2 space-y-1 flex-1 overflow-y-auto">
         {modules.map((mod) => (
           <div key={mod.module_id}>
             <button
               onClick={() =>
-                setOpenModule(
-                  openModule === mod.module_id ? null : mod.module_id
-                )
+                setOpenModule(openModule === mod.module_id ? null : mod.module_id)
               }
               className={`w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-100 ${
                 collapsed ? "justify-center" : ""
@@ -161,9 +202,7 @@ export default function Sidebar({
                       key={menu.id}
                       href={href}
                       className={`block px-3 py-1 rounded text-sm hover:bg-gray-100 ${
-                        isActiveMenu(href)
-                          ? "bg-gray-200 font-semibold"
-                          : ""
+                        isActiveMenu(href) ? "bg-gray-200 font-semibold" : ""
                       }`}
                     >
                       {menu.menu_name}
@@ -176,5 +215,44 @@ export default function Sidebar({
         ))}
       </nav>
     </aside>
+  );
+
+  if (loading) {
+    return (
+      <aside
+        className={`border-r bg-white transition-all duration-200 ${
+          collapsed ? "w-16" : "w-64"
+        }`}
+      >
+        <div className="p-4 text-center text-gray-500">
+          Loading sidebar...
+        </div>
+      </aside>
+    );
+  }
+
+  // ---------------------------
+  // Responsive render
+  // ---------------------------
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex">{SidebarContent}</div>
+
+      {/* Mobile sidebar overlay */}
+      <div
+        className={`fixed inset-0 z-40 bg-black/50 md:hidden ${
+          mobileOpen ? "block" : "hidden"
+        }`}
+        onClick={() => setMobileOpen(false)}
+      />
+      <div
+        className={`fixed z-50 top-0 left-0 h-full border-r bg-white transition-transform md:hidden ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } w-64`}
+      >
+        {SidebarContent}
+      </div>
+    </>
   );
 }
