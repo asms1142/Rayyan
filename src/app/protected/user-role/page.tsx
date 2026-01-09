@@ -82,7 +82,7 @@ export default function UserRolePage() {
       height: '520px',
       layout: 'fitColumns',
       data: roles,
-      pagination: 'local',
+      pagination: true,
       paginationSize: 100,
       paginationSizeSelector: [50, 100, 200],
       reactiveData: true,

@@ -147,7 +147,7 @@ export default function ProjectsPage() {
             .filter((l) => l.status === true)
             .map((l) => ({
               user_id: l.user_id,
-              fullname: l.user?.fullname || "Unknown",
+              fullname: l.user && l.user.length > 0 ? l.user[0].fullname : "Unknown",
               proj_cont_id: l.proj_cont_id,
             })),
 
@@ -156,7 +156,7 @@ export default function ProjectsPage() {
             .map((l) => ({
               pul_id: l.pul_id,
               user_id: l.user_id,
-              fullname: l.user?.fullname || "Unknown",
+              fullname: l.user && l.user.length > 0 ? l.user[0].fullname : "Unknown",
               proj_cont_id: l.proj_cont_id,
             })),
         };

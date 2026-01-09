@@ -129,7 +129,9 @@ export default function OrganizationDashboard() {
   }
 
   return (
-    <PageWrapper title="Organization Dashboard" breadcrumb={['Organization Dashboard']}>
+    <PageWrapper title="Organization Dashboard" breadcrumb={[
+    { label: "Organization Dashboard" }
+  ]}>
       {fetching ? (
         <Loader message="Loading dashboard..." />
       ) : (

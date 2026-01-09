@@ -56,5 +56,8 @@ export default function ProjectTokensPage() {
   if (loading) return <div>Loading project...</div>;
   if (!projectIdStr || !projectName) return <div>No project found</div>;
 
-  return <TokensClient projectId={projectIdStr} projectName={projectName} />;
+// Convert projectIdStr to number
+const projectId = Array.isArray(projectIdStr) ? Number(projectIdStr[0]) : Number(projectIdStr);
+
+return <TokensClient projectId={projectId} projectName={projectName} />;
 }

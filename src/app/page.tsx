@@ -40,7 +40,7 @@ export default function RootPage() {
         window.history.replaceState(null, '', window.location.pathname);
 
         // IMPORTANT: update Supabase client with temporary access token
-        await supabase.auth.setSession({ access_token: accessToken });
+        await supabase.auth.exchangeCodeForSession(accessToken);
 
         // Redirect based on type
         if (type === 'invite') {

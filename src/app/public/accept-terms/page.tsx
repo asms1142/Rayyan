@@ -54,6 +54,7 @@ export default function AcceptTermsPage() {
     }
 
     setLoading(true);
+
     try {
       const orgIdNum = Number(org_id);
       const userIdNum = Number(user_id);
@@ -63,27 +64,23 @@ export default function AcceptTermsPage() {
         .from("organization")
         .update({ tc_accepted: true })
         .eq("org_id", orgIdNum);
-
       if (orgError) throw orgError;
 
-      // 2️⃣ Upsert org_tc_acceptance
+      // 2️⃣ Upsert org_tc_acceptance (pass array of objects, onConflict as string)
       const { error: orgTCError } = await supabase
         .from("org_tc_acceptance")
-        .upsert(
-          { org_id: orgIdNum, tc_id: activeTC.tc_id },
-          { onConflict: ["org_id", "tc_id"] }
-        );
-
+        .upsert([{ org_id: orgIdNum, tc_id: activeTC.tc_id }], {
+          onConflict: "org_id", // Supabase TypeScript expects a single string
+        });
       if (orgTCError) throw orgTCError;
 
-      // 3️⃣ Upsert user_tc_acceptance (include org_id)
+      // 3️⃣ Upsert user_tc_acceptance
       const { error: userTCError } = await supabase
         .from("user_tc_acceptance")
         .upsert(
-          { user_id: userIdNum, org_id: orgIdNum, tc_id: activeTC.tc_id },
-          { onConflict: ["user_id", "tc_id"] }
+          [{ user_id: userIdNum, org_id: orgIdNum, tc_id: activeTC.tc_id }],
+          { onConflict: "user_id" } // single string
         );
-
       if (userTCError) throw userTCError;
 
       alert("Terms accepted successfully!");

@@ -151,7 +151,7 @@ export default function ModuleMenuPage() {
       layout: 'fitColumns',
       data: menus,
       reactiveData: true,
-      pagination: 'local',
+      pagination: true,
       paginationSize: 50,
       paginationSizeSelector: [50, 100, 200],
       columns: [

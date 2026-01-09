@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
     /* ---------------- Invite User ---------------- */
     const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/set-password-new`,
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/set-password-new`,
     });
 
     if (inviteError || !inviteData?.user?.id) {

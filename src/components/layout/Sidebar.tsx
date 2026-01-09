@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Dispatch, SetStateAction } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Menu } from "lucide-react";
@@ -23,17 +23,22 @@ interface ModuleItem {
   menus: MenuItem[];
 }
 
+export interface SidebarProps {
+  collapsed: boolean;
+  setCollapsed: Dispatch<SetStateAction<boolean>>;
+}
+
 /* ================= COMPONENT ================= */
-export default function Sidebar() {
+export default function Sidebar({
+  collapsed,
+  setCollapsed,
+}: SidebarProps) {
   const [modules, setModules] = useState<ModuleItem[]>([]);
   const [openModule, setOpenModule] = useState<number | null>(null);
   const [roleId, setRoleId] = useState<number | null>(null);
   const [companyName, setCompanyName] = useState("Company");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const [desktopCollapsed, setDesktopCollapsed] = useState(false); // desktop collapse state
-  const [mobileOpen, setMobileOpen] = useState(false); // mobile overlay sidebar
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const pathname = usePathname();
 
@@ -46,7 +51,6 @@ export default function Sidebar() {
 
       if (!user) {
         setIsLoggedIn(false);
-        setLoading(false);
         return;
       }
 
@@ -60,7 +64,6 @@ export default function Sidebar() {
 
       if (error || !userData) {
         console.error("User info error:", error?.message);
-        setLoading(false);
         return;
       }
 
@@ -83,7 +86,6 @@ export default function Sidebar() {
     if (!roleId) return;
 
     const loadSidebar = async () => {
-      setLoading(true);
       try {
         const { data: modulesData } = await supabase
           .from("module")
@@ -107,13 +109,14 @@ export default function Sidebar() {
               const allowedMenus =
                 menusData
                   ?.filter((menu) => menu.module_id === mod.module_id)
-                  .filter((menu) => {
-                    const access = accessData?.find(
+                  .filter((menu) =>
+                    accessData?.some(
                       (a) =>
-                        a.menu_id === menu.id && a.module_id === mod.module_id
-                    );
-                    return access?.view === true;
-                  }) ?? [];
+                        a.menu_id === menu.id &&
+                        a.module_id === mod.module_id &&
+                        a.view === true
+                    )
+                  ) ?? [];
 
               return { ...mod, menus: allowedMenus };
             })
@@ -123,8 +126,6 @@ export default function Sidebar() {
       } catch (err) {
         console.error("Sidebar load error:", err);
         setModules([]);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -155,11 +156,13 @@ export default function Sidebar() {
             }
             className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-100"
           >
-            <span>{mod.name}</span>
+            <span className={collapsed ? "hidden" : "block"}>
+              {mod.name}
+            </span>
             <ChevronDown size={16} />
           </button>
 
-          {openModule === mod.module_id && (
+          {openModule === mod.module_id && !collapsed && (
             <div className="ml-4 space-y-1">
               {mod.menus.map((menu) => {
                 const href = buildHref(menu.page_name);
@@ -169,7 +172,9 @@ export default function Sidebar() {
                     href={href}
                     onClick={handleMenuClick}
                     className={`block px-3 py-1 rounded text-sm hover:bg-gray-100 ${
-                      isActiveMenu(href) ? "bg-gray-200 font-semibold" : ""
+                      isActiveMenu(href)
+                        ? "bg-gray-200 font-semibold"
+                        : ""
                     }`}
                   >
                     {menu.menu_name}
@@ -187,25 +192,27 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div
+      <aside
         className={`hidden md:flex flex-col border-r bg-white transition-all duration-300 ${
-          desktopCollapsed ? "w-16" : "w-64"
+          collapsed ? "w-16" : "w-64"
         } h-full`}
       >
         <div className="flex items-center justify-between p-3 border-b">
-          {!desktopCollapsed && <span className="font-bold">{companyName}</span>}
+          {!collapsed && (
+            <span className="font-bold truncate">{companyName}</span>
+          )}
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => setDesktopCollapsed(!desktopCollapsed)}
+            onClick={() => setCollapsed((v) => !v)}
           >
             <Menu size={18} />
           </Button>
         </div>
         {SidebarContent}
-      </div>
+      </aside>
 
-      {/* Mobile Hamburger fixed under topbar */}
+      {/* Mobile Hamburger */}
       <div className="fixed top-[60px] left-2 z-50 md:hidden">
         <Button size="icon" variant="ghost" onClick={() => setMobileOpen(true)}>
           <Menu size={24} />
@@ -220,7 +227,11 @@ export default function Sidebar() {
       >
         <div className="flex items-center justify-between p-3 border-b">
           <span className="font-bold">{companyName}</span>
-          <Button size="icon" variant="ghost" onClick={() => setMobileOpen(false)}>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setMobileOpen(false)}
+          >
             ✕
           </Button>
         </div>

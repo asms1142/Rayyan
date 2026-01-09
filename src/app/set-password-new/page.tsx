@@ -10,23 +10,25 @@ import { Loader } from '@/components/ui/Loader';
 export default function SetPasswordPage() {
   const router = useRouter();
 
-  const [token, setToken] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // 1️⃣ Get tokens from sessionStorage
   useEffect(() => {
-    const sessionToken = sessionStorage.getItem('supabase_access_token');
-    console.log('🔑 Session token:', sessionToken);
+    const access = sessionStorage.getItem('supabase_access_token');
+    const refresh = sessionStorage.getItem('supabase_refresh_token');
 
-    if (!sessionToken) {
-      console.warn('⚠️ No token found, redirecting to login');
+    if (!access || !refresh) {
       router.replace('/public/auth/login');
       return;
     }
 
-    setToken(sessionToken);
+    setAccessToken(access);
+    setRefreshToken(refresh);
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,7 +45,7 @@ export default function SetPasswordPage() {
       return;
     }
 
-    if (!token) {
+    if (!accessToken || !refreshToken) {
       setError('Invalid session, please retry');
       return;
     }
@@ -51,37 +53,37 @@ export default function SetPasswordPage() {
     setLoading(true);
 
     try {
-      console.log('🚀 Resetting password for token:', token);
+      // 2️⃣ Set the Supabase session temporarily
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
 
-      // Use Supabase auth API to update password via invite token
+      if (sessionError) throw sessionError;
+
+      // 3️⃣ Update the password for the current user
       const { error: updateError } = await supabase.auth.updateUser({
-        access_token: token,
         password: newPassword,
       });
 
-      if (updateError) {
-        console.error('❌ Password update error:', updateError);
-        setError(updateError.message);
-        setLoading(false);
-        return;
-      }
+      if (updateError) throw updateError;
 
-      console.log('✅ Password updated successfully');
-
-      // Clear token from session storage
+      // Clear tokens from sessionStorage
       sessionStorage.removeItem('supabase_access_token');
+      sessionStorage.removeItem('supabase_refresh_token');
 
       alert('Password set successfully! Please login now.');
       router.replace('/public/auth/login');
     } catch (err: any) {
-      console.error('🔥 Unexpected error:', err);
+      console.error(err);
       setError(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!token) return <Loader message="Validating session..." />;
+  if (!accessToken || !refreshToken)
+    return <Loader message="Validating session..." />;
 
   return (
     <PageWrapper title="Set New Password" breadcrumb={[{ label: 'Set Password' }]}>

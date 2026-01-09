@@ -18,10 +18,12 @@ export const usePendingInvites = (userId: number) => {
   useEffect(() => {
     const fetchInvites = async () => {
       setLoading(true);
+
       const { data, error } = await supabase
         .from("project_users_Log")
         .select(`
           pul_id,
+          project_id,
           Status,
           invite_token,
           project:project_id(project_name)
@@ -29,8 +31,24 @@ export const usePendingInvites = (userId: number) => {
         .eq("user_id", userId)
         .eq("Status", false);
 
-      if (error) console.error("Error fetching invites:", error);
-      else setPendingInvites(data || []);
+      if (error) {
+        console.error("Error fetching invites:", error);
+        setPendingInvites([]);
+      } else if (data) {
+        // Map to ensure type matches PendingInvite
+        const formatted: PendingInvite[] = data.map((item: any) => ({
+          pul_id: item.pul_id,
+          project_id: item.project_id,
+          Status: item.Status,
+          invite_token: item.invite_token,
+          project: {
+            project_name: item.project?.project_name || "",
+          },
+        }));
+        setPendingInvites(formatted);
+      } else {
+        setPendingInvites([]);
+      }
 
       setLoading(false);
     };

@@ -119,7 +119,7 @@ export default function CustomersPage() {
       layout: 'fitColumns',
       data: customers,
       reactiveData: true,
-      pagination: 'local',
+      pagination: true,
       paginationSize: 50,
       columns: [
         { title: 'SL', formatter: 'rownum', width: 70, hozAlign: 'center' },
@@ -159,13 +159,19 @@ export default function CustomersPage() {
   /** ================= Search ================= */
   useEffect(() => {
     if (!tabulator.current) return;
-    tabulator.current.clearFilter(true);
-    if (search) {
-      tabulator.current.addFilter((data) =>
-        [data.cus_name, data.cus_email, data.cus_mobile_no, data.cus_phone_no]
-          .some((v) => v?.toLowerCase().includes(search.toLowerCase()))
-      );
-    }
+   tabulator.current.clearFilter(true);
+
+if (search) {
+  tabulator.current.setFilter(
+    [
+      { field: "cus_name", type: "like", value: search },
+      { field: "cus_email", type: "like", value: search },
+      { field: "cus_mobile_no", type: "like", value: search },
+      { field: "cus_phone_no", type: "like", value: search },
+    ],
+    "or"
+  );
+}
   }, [search]);
 
   /** ================= Render ================= */

@@ -67,16 +67,16 @@ async function getUniqueOrgCode() {
   let code = generateOrgCode();
   let exists = true;
 
-  while (exists) {
-    const { data } = await supabase
-      .from("organization")
-      .select("org_id")
-      .maybeSingle()
-      .eq("org_code", code);
+ while (exists) {
+  const { data, error } = await supabase
+    .from("organization")
+    .select("org_id")
+    .eq("org_code", code) // filter first
+    .maybeSingle();       // then maybeSingle
 
-    if (!data) exists = false;
-    else code = generateOrgCode();
-  }
+  if (!data) exists = false;
+  else code = generateOrgCode();
+}
 
   return code;
 }

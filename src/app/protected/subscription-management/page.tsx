@@ -154,7 +154,7 @@ export default function SubscriptionManagement() {
       layout: 'fitColumns',
       data: plans,
       reactiveData: true,
-      pagination: 'local',
+      pagination: true,
       paginationSize: 50,
       columns: [
         { title: 'SL', formatter: 'rownum', width: 70, hozAlign: 'center' },

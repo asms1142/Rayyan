@@ -115,7 +115,17 @@ export default function UsersListPage() {
 
       const { data, error } = await query;
 
-      if (!error) setUsers(data || []);
+      if (!error && data) {
+        // Fix: map arrays to single objects for TypeScript
+        const formattedUsers: User[] = data.map(u => ({
+          ...u,
+          userrole: u.userrole?.[0] || undefined,
+          organization: u.organization?.[0] || undefined,
+        }));
+
+        setUsers(formattedUsers);
+      }
+
       setLoading(false);
     };
 
@@ -123,7 +133,7 @@ export default function UsersListPage() {
   }, [roleId, orgId, cusId, search]);
 
   /* ---------------- Guards ---------------- */
-  if (permissionLoading) return <Loader message="Checking permissions..." />;
+  if (permissionLoading) return <Loader type="card" count={1} />;
   if (!authorized)
     return (
       <div className="p-6 text-center text-red-500 font-semibold">
@@ -133,17 +143,7 @@ export default function UsersListPage() {
 
   /* ---------------- UI ---------------- */
   return (
-    <PageWrapper
-      title="Users"
-      breadcrumb={[
-        { label: 'Home', href: '/protected/dashboard' },
-        { label: 'Users' },
-      ]}
-      actionButton={{
-        label: 'Create User',
-        href: '/protected/users/create',
-      }}
-    >
+    <PageWrapper title="Users" breadcrumb={[{ label: 'Home', href: '/protected/dashboard' }, { label: 'Users' }]}>
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
         <input
@@ -154,27 +154,42 @@ export default function UsersListPage() {
           onChange={e => setSearch(e.target.value)}
         />
 
-        <select className="border px-3 py-2 rounded" value={roleId}
-          onChange={e => setRoleId(e.target.value)}>
+        <select
+          className="border px-3 py-2 rounded"
+          value={roleId}
+          onChange={e => setRoleId(e.target.value)}
+        >
           <option value="">All Roles</option>
           {roles.map(r => (
-            <option key={r.role_id} value={r.role_id}>{r.rolename}</option>
+            <option key={r.role_id} value={r.role_id}>
+              {r.rolename}
+            </option>
           ))}
         </select>
 
-        <select className="border px-3 py-2 rounded" value={orgId}
-          onChange={e => setOrgId(e.target.value)}>
+        <select
+          className="border px-3 py-2 rounded"
+          value={orgId}
+          onChange={e => setOrgId(e.target.value)}
+        >
           <option value="">All Organizations</option>
           {organizations.map(o => (
-            <option key={o.org_id} value={o.org_id}>{o.orgname}</option>
+            <option key={o.org_id} value={o.org_id}>
+              {o.orgname}
+            </option>
           ))}
         </select>
 
-        <select className="border px-3 py-2 rounded" value={cusId}
-          onChange={e => setCusId(e.target.value)}>
+        <select
+          className="border px-3 py-2 rounded"
+          value={cusId}
+          onChange={e => setCusId(e.target.value)}
+        >
           <option value="">All Customers</option>
           {customers.map(c => (
-            <option key={c.cus_id} value={c.cus_id}>{c.cus_name}</option>
+            <option key={c.cus_id} value={c.cus_id}>
+              {c.cus_name}
+            </option>
           ))}
         </select>
 
@@ -193,7 +208,7 @@ export default function UsersListPage() {
 
       {/* Table */}
       {loading ? (
-        <Loader message="Loading users..." />
+        <Loader type="table" count={5} />
       ) : (
         <div className="overflow-x-auto bg-white rounded shadow">
           <table className="w-full border-collapse">

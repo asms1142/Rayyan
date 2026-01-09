@@ -1,6 +1,6 @@
 // api/create-customer/route.ts
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 function generateOrgCode(length = 6) {
   // Alphanumeric uppercase
@@ -32,7 +32,7 @@ async function getUniqueOrgCode(supabase: any) {
 }
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+  const supabase = supabaseServer;
   const body = await req.json();
 
   const { fullname, nickname, email, password, orgname, address, phone, plan_id, trial } = body;

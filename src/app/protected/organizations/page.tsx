@@ -108,7 +108,7 @@ export default function OrganizationsPage() {
       layout: 'fitColumns',
       data: organizations,
       reactiveData: true,
-      pagination: 'local',
+      pagination: true,
       paginationSize: 50,
       columns: [
         { title: 'SL', formatter: 'rownum', width: 70, hozAlign: 'center' },
@@ -147,7 +147,7 @@ export default function OrganizationsPage() {
     tabulator.current.clearFilter(true);
 
     if (search) {
-      tabulator.current.addFilter((row) =>
+      tabulator.current.setFilter((row) =>
         [
           row.orgname,
           row.org_code,

@@ -88,13 +88,17 @@ export default function ProjectOverview() {
         .select("project_id, project_name, proj_type_id, cus_id")
         .in("project_id", projectIds);
 
-      const projTypeIds = projectsData.map((p) => p.proj_type_id);
+      const projTypeIds = (projectsData ?? []).map((p) => p.proj_type_id);
       const { data: projTypes } = await supabase
         .from("project_type")
         .select("proj_type_id, project_type")
         .in("proj_type_id", projTypeIds);
 
-      const cusIds = projectsData.map((p) => p.cus_id);
+      if (!projectsData || projectsData.length === 0) {
+  return;
+}
+
+const cusIds = projectsData.map((p) => p.cus_id);
       const { data: customers } = await supabase
         .from("customer")
         .select("cus_id, cus_name")
